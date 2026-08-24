@@ -1,0 +1,43 @@
+name: PIPE-OJA-BRANCH0
+
+on:
+  push:
+    branches: [oja-pipe-branching]
+    paths:
+      - 'pipe_oja/**'
+      - '.github/workflows/pipe-oja-branch0.yml'
+  workflow_dispatch:
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install
+        run: python -m pip install --upgrade pip && python -m pip install numpy scipy
+      - name: Run gate
+        run: python pipe_oja/run.py --out pipe_oja_branch0.json
+      - name: Enforce receipt
+        run: |
+          python - <<'PY'
+          import json
+          r = json.load(open('pipe_oja_branch0.json'))
+          s = r['summary']
+          c = s['comparisons']
+          assert c['branch_minus_cable_p'] <= 0.05, c
+          assert c['branch_minus_shuffle_p'] <= 0.05, c
+          assert c['all_branch_above_cable_capacity'], c
+          for row in r['rows']:
+              for arm in ('branch', 'cable', 'branch_shuffle'):
+                  assert abs(row['arms'][arm]['final']['mass_sum'] - 1.0) < 1e-9
+          print('PASS: branching earned capacity under fixed mass and blind pressure')
+          PY
+      - name: Upload receipt
+        uses: actions/upload-artifact@v4
+        with:
+          name: pipe-oja-branch0
+          path: pipe_oja_branch0.json
