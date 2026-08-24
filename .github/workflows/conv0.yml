@@ -10,6 +10,15 @@ on:
       - notes/conv0_rotating_demixer_contract.md
       - requirements.txt
       - .github/workflows/conv0.yml
+  pull_request:
+    branches: [main]
+    paths:
+      - experiments/fa_bss_conv0_rotating.py
+      - experiments/fa_bss_real0.py
+      - experiments/fa_bss_real1b_broadband.py
+      - notes/conv0_rotating_demixer_contract.md
+      - requirements.txt
+      - .github/workflows/conv0.yml
   workflow_dispatch:
 
 permissions:
