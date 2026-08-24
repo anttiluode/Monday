@@ -1,0 +1,74 @@
+name: CONV0 rotating synthetic demixer
+
+on:
+  push:
+    branches: [conv0-rotating-demixer]
+    paths:
+      - experiments/fa_bss_conv0_rotating.py
+      - experiments/fa_bss_real0.py
+      - experiments/fa_bss_real1b_broadband.py
+      - notes/conv0_rotating_demixer_contract.md
+      - requirements.txt
+      - .github/workflows/conv0.yml
+  pull_request:
+    branches: [main]
+    paths:
+      - experiments/fa_bss_conv0_rotating.py
+      - experiments/fa_bss_real0.py
+      - experiments/fa_bss_real1b_broadband.py
+      - notes/conv0_rotating_demixer_contract.md
+      - requirements.txt
+      - .github/workflows/conv0.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  conv0:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout Monday
+        uses: actions/checkout@v4
+        with:
+          path: Monday
+
+      - name: Checkout FunctionalArbors
+        uses: actions/checkout@v4
+        with:
+          repository: anttiluode/FunctionalArbors
+          path: FunctionalArbors
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: Monday/requirements.txt
+
+      - name: Install dependencies
+        run: python -m pip install -r Monday/requirements.txt
+
+      - name: Syntax check
+        run: |
+          python -m py_compile Monday/experiments/fa_bss_real0.py
+          python -m py_compile Monday/experiments/fa_bss_real1b_broadband.py
+          python -m py_compile Monday/experiments/fa_bss_conv0_rotating.py
+
+      - name: Run pre-registered CONV0 gate
+        working-directory: Monday
+        run: |
+          python experiments/fa_bss_conv0_rotating.py \
+            --fa-root ../FunctionalArbors \
+            --seeds 4 \
+            --steps 120 \
+            --oracle-steps 80 \
+            --out fa_bss_conv0_rotating.json
+
+      - name: Upload result
+        uses: actions/upload-artifact@v4
+        with:
+          name: fa-bss-conv0
+          path: Monday/fa_bss_conv0_rotating.json
+          if-no-files-found: error
