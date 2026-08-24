@@ -18,7 +18,7 @@ Gate:
 Run:
 
 ```bash
-python experiments/fa_bss0_run.py --fa-root ../FunctionalArbors --seeds 8 --mutations 28
+python experiments/fa_bss0_run_fast.py --fa-root ../FunctionalArbors --seeds 8 --mutations 28
 ```
 
 Success is not a pretty arbor. Success is frozen-anatomy source recovery plus a measured physical transfer function that explains it.
@@ -35,4 +35,33 @@ python experiments/fa_bss0_reachability.py --fa-root ../FunctionalArbors --seeds
 
 This is a sampled reachable set, not a proof of the complete set. If excellent demixing ratios appear in the random walk but supervised greedy learning fails to find them, the bottleneck is search/credit assignment rather than raw morphological expressivity.
 
-Do not move to blind ICA/IVE-style objectives until this supervised gate and its reachability diagnosis are understood.
+## FA-BSS-REAL0 — Two Ears recording -> real demixing coefficient -> anatomy
+
+The branch now contains the first physical recording pair in `Wav/`:
+
+- `two_ears_in0.wav` — microphone / XLR
+- `two_ears_in1.wav` — guitar pickup / instrument input
+
+`fa_bss_real0.py` does three things, in that order:
+
+1. **Diagnose the recording itself.** It measures cross-channel lag/correlation, frequency-dependent coherence, and spectral asymmetries so we can tell whether this is a real shared-mixture problem or merely two already-disjoint sensors.
+2. **Fit digital reference separators.** FastICA is the instantaneous attacker; AuxIVA is the frequency-dependent/convolutive reference. With no ground-truth sources in a live recording, channel signatures and frozen/intervention recordings are diagnostics, not proof by themselves.
+3. **Compile one real AuxIVA demixing row into FunctionalArbor morphology.** The strongest pickup-associated AuxIVA STFT bin supplies a two-complex-number target `w=[w0,w1]`. Existing legal v0.5 morphology is then asked whether its measured physical transfer vector `H=[H0,H1]` can approach that direction. This is a supervised real-data capability test, not yet blind learning. A blind fourth-cumulant arm is printed only as an exploratory comparison.
+
+Run from Monday with FunctionalArbors checked out beside it:
+
+```bash
+python experiments/fa_bss_real0.py --fa-root ../FunctionalArbors
+```
+
+It writes `fa_bss_real0.json` and prints the useful summary. The decisive fields are:
+
+- `median_coherence_40_10k` / `p95_coherence_40_10k`: whether the sensors share structured content;
+- AuxIVA `channel_signature`: whether recovered components actually have different sensor footprints;
+- `audio_bin` target ratio: the real-data digital demixing coefficient selected for compilation;
+- FunctionalArbor `start -> teacher` projective error and `auxiva_bin_corr`: whether anatomy moved toward and reproduced the real digital demixer;
+- blind-arm kurtosis and AuxIVA-bin correlation: whether a source-label-free statistical pressure happens to move in the same direction.
+
+Important limitation: TWO EARS currently saves each mono input with its own peak normalization. That loses the original physical inter-channel gain calibration, although invertible per-sensor scaling does not destroy the BSS problem itself. Future recordings should also save one untouched stereo/raw pair.
+
+Do not move to broad claims about live blind anatomical source separation until the supervised synthetic gate, the real-data coefficient compile, and a frozen causal intervention recording all agree.
