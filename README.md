@@ -26,9 +26,9 @@ experience / target pressure
         -> future computation
 ```
 
-One anatomy produces the whole curve. It cannot choose an unrelated coefficient independently at every frequency. Geometry is therefore a candidate **compressed, physically coupled parameterization of an operator**.
+One anatomy produces the whole curve. It cannot choose an unrelated coefficient independently at every frequency. Geometry is therefore a candidate **physically coupled parameterization of an operator**.
 
-That is the idea Monday is now trying to kill or preserve.
+The current evidence says the coupling is real. It has **not** yet shown that this coupling is a superior or reliably useful representation.
 
 ## Result ladder
 
@@ -62,11 +62,9 @@ The exploratory one-bin fourth-cumulant objective failed and is killed. Increasi
 
 See [`notes/fa_bss_real0_result.md`](notes/fa_bss_real0_result.md).
 
-### FA-BSS-REAL1B — one body, many frequencies
+### FA-BSS-REAL1B — first broadband attack
 
-REAL1B was the first direct attack on the larger structural-operator interpretation.
-
-One morphology was trained against nine AuxIVA demixing directions spanning approximately 409–2003 Hz, mapped by one fixed global scale into the dimensionless FunctionalArbor frequency axis. The same anatomy had to improve all frequencies together.
+REAL1B trained one morphology against nine AuxIVA demixing directions from the real recording.
 
 The shared body improved in **4/4 seeds**:
 
@@ -75,41 +73,107 @@ mean projective error: 43.64 deg -> 36.11 deg
 median fractional improvement: 17.2%
 ```
 
-But the strongest control killed the big version of the claim:
+But the decisive attacker found that the best single frequency-independent direction already scored:
 
 ```text
-best single frequency-independent direction: 15.38 deg
+15.38 deg
 ```
 
-So the real recording's apparently dramatic complex ratios were misleading. At higher frequencies the AuxIVA rows increasingly point toward roughly the same sensor axis in projective space. One constant direction already explains the target much better than the developed arbor.
-
-Therefore:
+So the apparently dramatic real AuxIVA ratios mostly collapsed toward a common sensor axis in projective space.
 
 ```text
 representation_pass = false
 ```
 
-This is an important negative result. **REAL1B did not show that one morphology compactly represents a genuinely difficult broadband demixer better than a simple fixed coefficient.**
-
-A smaller residue survived. When morphology was optimized only on alternating frequencies, unseen interleaved frequencies improved in 3/4 seeds:
+A smaller residue survived. Training only alternating frequencies improved unseen interleaved frequencies in 3/4 seeds:
 
 ```text
 held-out mean: 46.46 deg -> 42.10 deg
-```
-
-Optimizing a shuffled frequency-to-target assignment produced only weak improvement against the correct curve. Under the pre-registered rule:
-
-```text
 coupling_hint = true
 ```
 
-So one structural change really can move several transfer coefficients together in a target-relevant way. We have operational evidence for **coupling across frequencies**, but not yet evidence that the coupling is a useful compact parameterization compared with ordinary alternatives.
+REAL1B therefore provided evidence of cross-frequency coupling but not useful broadband representation.
 
 See:
 
 - [`notes/real1b_broadband_contract.md`](notes/real1b_broadband_contract.md)
 - [`notes/fa_bss_real1b_result.md`](notes/fa_bss_real1b_result.md)
 - [`experiments/fa_bss_real1b_broadband.py`](experiments/fa_bss_real1b_broadband.py)
+
+### FA-BSS-CONV0 — controlled rotating synthetic demixer
+
+CONV0 removed REAL1B's target ambiguity by freezing a synthetic convolutive world before training:
+
+```text
+x1[t] = s1[t] + 0.90 * s2[t - 14]
+x2[t] = 0.35 * s1[t - 3] + s2[t]
+```
+
+The exact source-1 extraction direction is
+
+```text
+w(omega) = [1, -0.90 exp(-i 14 omega)]
+```
+
+across nine fixed FunctionalArbor frequencies `0.07 .. 0.35`.
+
+This time the constant-vector hardness control passed before morphology ran:
+
+```text
+best constant direction = 31.38 deg
+```
+
+The exact matched FIR remained essentially perfect:
+
+```text
+y[t] = x1[t] - 0.90*x2[t-14]
+error ~= 0 deg
+```
+
+One shared body nevertheless learned a substantial part of the rotating curve in every seed:
+
+```text
+seed 0   50.65 -> 35.14 deg
+seed 1   39.65 -> 35.85 deg
+seed 2   50.94 -> 31.18 deg
+seed 3   60.86 -> 31.14 deg
+
+mean       50.52 -> 33.33 deg
+median fractional improvement = 34.7%
+```
+
+But the pre-registered representation criterion required at least 3/4 seeds to beat the 31.38-degree constant attacker. Only 2/4 did:
+
+```text
+rotating_representation_pass = false
+```
+
+So the strong representation claim still does not pass.
+
+The held-out result was stronger. Training only frequencies `0,2,4,6,8` improved the unseen frequencies `1,3,5,7` in **4/4 seeds**:
+
+```text
+held-out mean: 49.88 -> 38.28 deg
+median held-out improvement: 12.18 deg
+```
+
+Optimizing the same target vectors in reversed frequency order produced only a 4.90-degree median improvement against the correct curve.
+
+```text
+heldout_coupling_pass = true
+```
+
+This is Monday's strongest surviving result so far:
+
+> **One persistent geometry imposes a learnable coupling across a family of frequency responses: mutations selected at some frequencies can move unseen frequencies in a target-relevant direction, and correct frequency organization matters.**
+
+That still does not show that morphology is a better parameterization than an ordinary filter. The exact FIR wins trivially on CONV0.
+
+See:
+
+- [`notes/conv0_rotating_demixer_contract.md`](notes/conv0_rotating_demixer_contract.md)
+- [`notes/fa_bss_conv0_result.md`](notes/fa_bss_conv0_result.md)
+- [`experiments/fa_bss_conv0_rotating.py`](experiments/fa_bss_conv0_rotating.py)
 
 ### Visible Arbor
 
@@ -133,11 +197,13 @@ The narrower machine-organization hypothesis is:
 
 > **A learned structure can parameterize a family of computations because many effective coefficients are coupled consequences of one persistent organization.**
 
-That is stronger than “memory in matter.” The stored history changes the **operator implemented by the matter**.
+CONV0 strengthens one half of that sentence: the coupling is operational and can generalize across withheld frequencies.
 
-The question now is whether that coupling ever buys something rather than merely constraining the machine.
+The unresolved half is the important one:
 
-The current state is written out in [`notes/state_of_mind_2026-08-24.md`](notes/state_of_mind_2026-08-24.md).
+> **When does structural coupling buy anything rather than merely constrain the machine?**
+
+The stored history changes the **operator implemented by the matter**. Whether that is useful compared with compact conventional parameterizations remains open.
 
 ## Why ICA / IVA / IVE are here
 
@@ -179,34 +245,40 @@ These works make it incorrect to say that dendrites + BSS is an unexplored combi
 - FunctionalArbors currently performs blind source separation.
 - Monday explains why biological dendrites exist.
 - REAL1B demonstrated a superior broadband morphology.
+- CONV0 demonstrated a superior broadband morphology.
+- Structural morphology beats ordinary FIR filtering.
 - A browser tree that reaches a target is evidence of neurobiology.
 
-The defensible research hypothesis remains:
+The defensible hypothesis remains:
 
 > **Local structural plasticity under a constrained material budget may be able to learn morphology whose physical broadband transfer function performs a useful signal transform.**
 
-But REAL1B adds an important condition: the target must actually require a nontrivial frequency-dependent direction, and morphology must beat a constant/filter baseline before the larger interpretation earns anything.
+But the result ladder has made the burden sharper: useful morphology must beat reduced conventional attackers on a target that genuinely requires frequency-dependent computation.
 
 ## Next hard gate
 
-Do not mine the current real recording for prettier bins. That would be post-hoc target shopping.
+CONV0's target is deliberately simple even though it rotates strongly:
 
-Build a **predeclared synthetic convolutive mixture with known FIR source-to-sensor paths** chosen before training so that the exact inverse demixing direction genuinely rotates across frequency.
+```text
+ratio(omega) = -0.90 exp(-i14 omega)
+```
 
-Then compare:
+One gain and one delay generate the whole operator. An ordinary matched FIR therefore solves it exactly with essentially no drama.
 
-1. one shared FunctionalArbor body;
-2. independent morphology per frequency;
-3. best constant complex direction;
-4. an ordinary matched FIR/filter parameterization;
-5. held-out frequencies;
-6. shuffled/reward controls.
+The next discriminating target should be a **predeclared multi-tap convolutive mixer**. Before morphology is trained, require all of:
 
-Because the hidden sources and FIR paths are known, the exact answer is available for scoring but need not be supplied to a later blind learner.
+1. the 2x2 FIR mixer is safely invertible across the evaluation band;
+2. the best constant demixing direction is poor;
+3. the best one-delay / linear-phase demixing model is also poor;
+4. the exact ordinary FIR solution is retained as the calibration winner.
 
-That gate asks the question REAL1B could not:
+Then compare the shared body, independent-body oracle, reduced digital models, held-out frequencies, and wrong-order controls again.
 
-> **Does one coherent structure buy a useful coherent family of computations?**
+That gate asks a harder version of Monday's surviving question:
+
+> **Can one coherent structure capture useful operator complexity that is not already explained by one scalar direction or one simple delay?**
+
+Do not tune that target after seeing the first morphology result.
 
 ## Repository map
 
