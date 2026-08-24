@@ -65,3 +65,49 @@ It writes `fa_bss_real0.json` and prints the useful summary. The decisive fields
 Important limitation: TWO EARS currently saves each mono input with its own peak normalization. That loses the original physical inter-channel gain calibration, although invertible per-sensor scaling does not destroy the BSS problem itself. Future recordings should also save one untouched stereo/raw pair.
 
 Do not move to broad claims about live blind anatomical source separation until the supervised synthetic gate, the real-data coefficient compile, and a frozen causal intervention recording all agree.
+
+## FA-BSS-REAL1B — one body, many frequencies
+
+REAL1B asks whether one fixed-mass morphology can move toward a whole AuxIVA demixing curve rather than one isolated complex coefficient.
+
+Pre-registered contract:
+
+- [`../notes/real1b_broadband_contract.md`](../notes/real1b_broadband_contract.md)
+
+Run:
+
+```bash
+python experiments/fa_bss_real1b_broadband.py \
+  --fa-root ../FunctionalArbors \
+  --bins 9 --fmin 400 --fmax 2400 \
+  --seeds 4 --steps 70 --oracle-steps 45
+```
+
+Controls are built into the script:
+
+1. best frequency-independent complex direction;
+2. independently remodeled body per frequency;
+3. alternating-frequency training with interleaved held-out frequencies;
+4. target vectors shuffled across frequencies.
+
+The first full run completed successfully in GitHub Actions. The shared body improved the nine-bin target in all four seeds, from a mean 43.64° to 36.11°, with a median fractional gain of 17.2%.
+
+However, the strongest control won decisively: the best single constant demixing direction had only **15.38°** mean projective error. Therefore the pre-registered broadband representation criterion failed:
+
+```text
+representation_pass = false
+```
+
+The useful residue is that alternating-frequency training improved unseen frequencies in 3/4 seeds, from 46.46° mean to 42.10°, while a shuffled-frequency target produced only weak correct-target improvement. The script therefore reports:
+
+```text
+coupling_hint = true
+```
+
+Interpretation: the current geometry does couple transfer coefficients across frequency in an operational way, but this recording does **not** demonstrate that one morphology usefully parameterizes a genuinely difficult broadband demixing operator. The target collapses surprisingly well toward one sensor direction in projective space.
+
+Full result:
+
+- [`../notes/fa_bss_real1b_result.md`](../notes/fa_bss_real1b_result.md)
+
+The next clean broadband test should use a predeclared synthetic convolutive mixture with known FIR paths that force the exact demixing direction to rotate substantially across frequency. That avoids target shopping and gives a known ground-truth inverse before morphology is trained.
