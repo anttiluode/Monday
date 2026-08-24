@@ -1,0 +1,39 @@
+name: FA-BSS-REAL0
+
+on:
+  push:
+    branches: [fa-bss0]
+    paths:
+      - 'Wav/**'
+      - 'experiments/fa_bss_real0.py'
+      - '.github/workflows/fa-bss-real0.yml'
+  workflow_dispatch:
+
+jobs:
+  real0:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fa-bss0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install dependencies
+        run: python -m pip install --upgrade pip && python -m pip install numpy scipy scikit-learn
+      - name: Fetch FunctionalArbors
+        run: git clone --depth 1 https://github.com/anttiluode/FunctionalArbors.git FunctionalArbors
+      - name: Run REAL0
+        run: python experiments/fa_bss_real0.py --fa-root FunctionalArbors --fa-seeds 4 --fa-steps 80 --out fa_bss_real0.json
+      - name: Print result JSON
+        if: always()
+        run: |
+          if [ -f fa_bss_real0.json ]; then cat fa_bss_real0.json; fi
+      - name: Upload result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fa-bss-real0-result
+          path: fa_bss_real0.json
+          if-no-files-found: ignore
