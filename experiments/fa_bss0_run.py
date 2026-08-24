@@ -6,7 +6,7 @@ an adjacent checkout instead of reimplementing the medium in Monday.
 Example (repos checked out side by side):
     python experiments/fa_bss0_run.py --fa-root ../FunctionalArbors --seeds 8
 
-Gate 0 is supervised: hidden source labels are used only by the structural
+Gate 0 is supervised: hidden source labels are used only for the structural
 accept/reject score.  The arbor's wave dynamics see only the two mixtures.
 """
 
@@ -40,7 +40,7 @@ def laplacian_sparse(model) -> sp.csr_matrix:
     cols: list[int] = []
     data: list[float] = []
 
-    # shift(u,0,-1)[y,x] = u[y,x+1], etc.  Out-of-grid shift values are 0,
+    # shift(u,0,-1)[y,x] = u[y,x+1], etc. Out-of-grid shift values are 0,
     # so boundary bonds still contribute their -k*u diagonal term.
     directions = ((0, 1, kr), (0, -1, kl), (1, 0, kd), (-1, 0, ku))
     for y in range(n):
@@ -63,14 +63,15 @@ def laplacian_sparse(model) -> sp.csr_matrix:
 
 
 def carrier_transfer(model, omega: float | None = None) -> np.ndarray:
-    """Linearized steady-state complex gains [H1,H2] from terminals to soma.
+    """Small-signal steady-state complex gains [H1,H2] from terminals to soma.
 
-    The v0.5 update is
+    The v0.5 update before its weak saturation is
       v[t+1] = v[t] + dt*(K L psi[t] - d v[t] - r psi[t] + u[t])
       psi[t+1] = psi[t] + dt*v[t+1]
 
-    For harmonic u[t] = U z^t, z=exp(i omega), solve directly for the phasor P.
-    Saturation is intentionally excluded from this small-signal diagnostic.
+    For harmonic u[t] = U z^t, z=exp(i omega), solve the linearization around
+    zero directly for the phasor P.  This measures what the frozen morphology
+    itself implements without waiting for a long driven tone to settle.
     """
     c = model.cfg
     omega = float(c.carrier_omega if omega is None else omega)
@@ -109,7 +110,6 @@ def purity(H: np.ndarray, A: np.ndarray, target: int = 0) -> tuple[float, np.nda
 def ideal_ratio(A: np.ndarray, target: int = 0) -> complex:
     """Ideal H2/H1 for exact cancellation of the non-target source."""
     other = 1 - int(target)
-    # G_other = H1*A[0,other] + H2*A[1,other] = 0.
     return complex(-A[0, other] / A[1, other])
 
 
@@ -120,7 +120,6 @@ def projective_error(H: np.ndarray, A: np.ndarray, target: int = 0) -> float:
     h = np.asarray(H, dtype=np.complex128)
     hn = h / (np.linalg.norm(h) + 1e-15)
     wn = w / (np.linalg.norm(w) + 1e-15)
-    # arbitrary global complex phase/scale is irrelevant
     overlap = float(np.clip(abs(np.vdot(wn, hn)), 0.0, 1.0))
     return float(math.acos(overlap))
 
@@ -160,17 +159,21 @@ def heldout_waveform_score(H: np.ndarray, A: np.ndarray, rng: np.random.Generato
     s = rng.laplace(size=(2, n))
     x = A @ s
     y = H @ x
-    # phase-invariant complex correlation magnitude with each hidden source
+
     def coh(a, b):
         a = np.asarray(a) - np.mean(a)
         b = np.asarray(b) - np.mean(b)
         return float(abs(np.vdot(b, a)) / ((np.linalg.norm(a) * np.linalg.norm(b)) + 1e-15))
+
     return {"target_corr": coh(y, s[0]), "other_corr": coh(y, s[1])}
 
 
 def train_one(base, A: np.ndarray, mode: str, mutations: int, seed: int):
     m = base.copy()
     m.mature = True
+    # v0.5 copy() currently does not preserve the post-bootstrap protection mask.
+    # Preserve it here so matched arms cannot move an endpoint simply because of copy().
+    m.protect = base.protect.copy()
     rng = np.random.default_rng(seed + 120_001)
 
     H = carrier_transfer(m)
@@ -292,7 +295,9 @@ def main():
     print("A =", A.tolist(), "ideal H2/H1 =", ideal_ratio(A))
 
     for seed in range(args.seeds):
-        cfg = FreeConfig(seed=seed, bootstrap_mass=args.bootstrap_mass, saturation=0.0)
+        # Keep the original v0.5 dynamics, including its weak saturation.  The
+        # transfer score is the corresponding small-signal linearization at zero.
+        cfg = FreeConfig(seed=seed, bootstrap_mass=args.bootstrap_mass)
         base = FreeBinaryArbor(cfg)
         boot = base.bootstrap()
         if not boot.get("ok", False):
