@@ -2,292 +2,264 @@
 
 GPT-5.6 Sol thinking repo.
 
-## Current question
+**Status: paused and consolidated, 2026-08-24.**
 
-Monday started as a source-separation test for [FunctionalArbors](https://github.com/anttiluode/FunctionalArbors). The useful question has become more general:
+Monday began when a source-separation detour collided with [FunctionalArbors](https://github.com/anttiluode/FunctionalArbors). It ended up doing two related things:
 
-> **Can persistent structure itself be a learned parameterization of computation?**
+1. using ICA / IVA / IVE as a much cleaner language for an old recurring question — *what hidden causes are inside a mixture, which ones correspond across views, and which one matters now?*;
+2. asking one deliberately strange follow-up — *can a persistent physical structure itself embody part of the learned unmixing operator?*
 
-The point is not that an arbor *contains* weights. A frozen arbor is a physical/dynamical object whose geometry produces a transfer function. With two terminals and one soma, at angular frequency `omega` its small-signal response is
+The second question produced the experiments in this repo. The first is probably the larger reason Monday was worth doing.
+
+## The larger turn: mixtures -> causes
+
+A lot of earlier work had tried to make hidden structure visible with phase, resonators, Fourier banks, fields, latent directions, geometry, or custom adaptive media. BSS gives a more disciplined middle problem:
+
+```text
+many latent causes
+        ↓
+observed mixtures
+        ↓
+ICA      separate independent-ish causes
+IVA      keep corresponding causes tied across views / frequency bins
+JISA     allow a cause to be a dependent subspace
+IVE      extract only the source of interest
+Dynamic  keep doing it while the mixing changes
+```
+
+This is not a theory of intelligence. It is useful mathematics for a very basic perceptual problem:
+
+> **Many causes are superposed in my measurements. Which cause is which, which combinations belong together, and which one matters now?**
+
+That framing connects cleanly to several older repo themes without requiring their mythology:
+
+- latent-space trajectories can be attacked with ICA instead of only PCA;
+- IVA can ask whether controls or sources correspond across different identities, sensors, subjects, or models despite different local coordinate systems;
+- IVE makes “only extract what matters now” a concrete algorithmic operation rather than a metaphor;
+- dynamic IVA/IVE gives a mature reference for moving sources and changing mixtures.
+
+A particularly promising non-Monday direction is automatic latent rigging: learn motion trajectories in several generated identities, use ICA/JISA to find candidate control factors inside each, and IVA to ask whether yaw, mouth, expression, etc. correspond across identities even when each model has a different local basis. Monday does not implement that. It simply left the door visibly open.
+
+## Why FunctionalArbors entered the story
+
+A frozen FunctionalArbor is a little wave-carrying body. With two terminals and one soma, its small-signal response at frequency `omega` is approximately
 
 ```text
 y(omega) = H1(omega) x1(omega) + H2(omega) x2(omega)
 ```
 
-Changing morphology changes `H1`, `H2`, and therefore changes the computation performed by the body.
+The complex gains `H1`, `H2` are consequences of path geometry, attenuation, and delay. Remodeling the body therefore changes the arithmetic performed at the soma.
 
-The organizing picture is now:
+That suggested a deliberately concrete question:
 
-```text
-experience / target pressure
-        -> structural remodeling
-        -> one persistent body
-        -> a coupled family of transfer coefficients H(omega)
-        -> future computation
-```
+> **Can legal structural remodeling make one persistent anatomy approximate a demixing operator?**
 
-One anatomy produces the whole curve. It cannot choose an unrelated coefficient independently at every frequency. Geometry is therefore a candidate **physically coupled parameterization of an operator**.
+The point was not “dendrites do ICA.” The point was to distinguish:
 
-The current evidence says the coupling is real. It has **not** yet shown that this coupling is a superior or reliably useful representation.
+- **representability** — can the body realize a useful operator at all?;
+- **learning/search** — can an unsupervised or local rule actually find it?;
+- **structural coupling** — does one body impose useful relationships across many apparent coefficients?
 
-## Result ladder
+## What the experiments actually established
 
-### FA-BSS0 — one-frequency synthetic capability
+### FA-BSS0 — one synthetic coefficient
 
-A fixed-mass FunctionalArbor can be structurally remodeled so its measured complex terminal-to-soma transfer moves toward a known inverse-mixing coefficient.
+A fixed-mass arbor could be remodeled so its measured complex terminal-to-soma transfer moved toward a known inverse-mixing coefficient.
 
-This separated two questions that had previously been mixed together:
+This was a supervised capability result. It showed that morphology could embody a coefficient; it did **not** show blind ICA or biological source separation.
 
-1. **Representability:** can legal morphology realize the required operator?
-2. **Learning/search:** can a plausible local rule find it?
+### FA-BSS-REAL0 — one coefficient learned elsewhere, compiled into anatomy
 
-FA-BSS0 is supervised. It establishes neither blind ICA nor neurobiology.
-
-### FA-BSS-REAL0 — compile one real complex coefficient
-
-A simultaneous SM58 + guitar-pickup recording was analyzed with FastICA and AuxIVA. FastICA mostly rediscovered the already-different sensor axes. AuxIVA produced frequency-dependent complex combinations.
-
-At 602.93 Hz, one AuxIVA row had approximately
+A simultaneous SM58 + guitar-pickup recording was analyzed with digital separators. AuxIVA produced genuinely complex frequency-dependent demixing directions. At 602.93 Hz one row was approximately
 
 ```text
 w = [0.086 - 0.806j, 1.004 + 0.004j]
-w1/w0 ~= 0.126 + 1.232j
 ```
 
-Four existing v0.5 FunctionalArbor morphologies were asked to approach that complex direction using only legal mass-conserving detour/prune mutations. Three moved substantially closer; the best seed reduced projective error from about 39.8 degrees to 16.1 degrees.
+Legal FunctionalArbor remodeling moved 3/4 starting morphologies substantially closer to that direction; the best seed improved from about 39.8 degrees projective error to 16.1 degrees.
 
-This is a **compile / representational result**, not blind source separation.
+Again: this was **compile / representability**, not blind source separation.
 
-The exploratory one-bin fourth-cumulant objective failed and is killed. Increasing one-bin non-Gaussianity did not reliably move the body toward a useful source separator.
+The first attempted blind learner — one-bin fourth-order non-Gaussianity — failed. It could happily increase kurtosis while walking away from the AuxIVA source. That route is killed.
 
 See [`notes/fa_bss_real0_result.md`](notes/fa_bss_real0_result.md).
 
-### FA-BSS-REAL1B — first broadband attack
+### FA-BSS-REAL1B — one body, several real frequency bins
 
-REAL1B trained one morphology against nine AuxIVA demixing directions from the real recording.
-
-The shared body improved in **4/4 seeds**:
+One shared morphology was trained against nine AuxIVA directions from the real recording.
 
 ```text
-mean projective error: 43.64 deg -> 36.11 deg
-median fractional improvement: 17.2%
-```
-
-But the decisive attacker found that the best single frequency-independent direction already scored:
-
-```text
-15.38 deg
-```
-
-So the apparently dramatic real AuxIVA ratios mostly collapsed toward a common sensor axis in projective space.
-
-```text
+shared-body mean error: 43.64 -> 36.11 deg
+best constant direction: 15.38 deg
 representation_pass = false
 ```
 
-A smaller residue survived. Training only alternating frequencies improved unseen interleaved frequencies in 3/4 seeds:
+The body moved the whole response curve, but the target was much easier than it first looked: a single frequency-independent direction beat the arbor badly.
+
+A smaller effect survived. Training only alternating frequencies improved unseen interleaved frequencies in 3/4 seeds:
 
 ```text
-held-out mean: 46.46 deg -> 42.10 deg
+held-out mean: 46.46 -> 42.10 deg
 coupling_hint = true
 ```
 
-REAL1B therefore provided evidence of cross-frequency coupling but not useful broadband representation.
+So one structural mutation really does move multiple frequency coefficients together. REAL1B did not show that this coupling was useful enough to justify the representation.
 
-See:
+See [`notes/fa_bss_real1b_result.md`](notes/fa_bss_real1b_result.md).
 
-- [`notes/real1b_broadband_contract.md`](notes/real1b_broadband_contract.md)
-- [`notes/fa_bss_real1b_result.md`](notes/fa_bss_real1b_result.md)
-- [`experiments/fa_bss_real1b_broadband.py`](experiments/fa_bss_real1b_broadband.py)
+### FA-BSS-CONV0 — controlled rotating demixer
 
-### FA-BSS-CONV0 — controlled rotating synthetic demixer
-
-CONV0 removed REAL1B's target ambiguity by freezing a synthetic convolutive world before training:
+CONV0 removed the REAL1B loophole with a synthetic convolutive world whose exact source-1 demixing direction genuinely rotates across frequency:
 
 ```text
-x1[t] = s1[t] + 0.90 * s2[t - 14]
-x2[t] = 0.35 * s1[t - 3] + s2[t]
+x1[t] = s1[t] + 0.90*s2[t-14]
+x2[t] = 0.35*s1[t-3] + s2[t]
+
+w(omega) = [1, -0.90 exp(-i14omega)]
 ```
 
-The exact source-1 extraction direction is
+The best constant direction scored 31.38 degrees, so the target was genuinely frequency-dependent.
+
+The shared body improved in all four seeds:
 
 ```text
-w(omega) = [1, -0.90 exp(-i 14 omega)]
+mean: 50.52 -> 33.33 deg
+median fractional improvement: 34.7%
 ```
 
-across nine fixed FunctionalArbor frequencies `0.07 .. 0.35`.
-
-This time the constant-vector hardness control passed before morphology ran:
-
-```text
-best constant direction = 31.38 deg
-```
-
-The exact matched FIR remained essentially perfect:
-
-```text
-y[t] = x1[t] - 0.90*x2[t-14]
-error ~= 0 deg
-```
-
-One shared body nevertheless learned a substantial part of the rotating curve in every seed:
-
-```text
-seed 0   50.65 -> 35.14 deg
-seed 1   39.65 -> 35.85 deg
-seed 2   50.94 -> 31.18 deg
-seed 3   60.86 -> 31.14 deg
-
-mean       50.52 -> 33.33 deg
-median fractional improvement = 34.7%
-```
-
-But the pre-registered representation criterion required at least 3/4 seeds to beat the 31.38-degree constant attacker. Only 2/4 did:
+But the predeclared representation criterion required at least 3/4 seeds to beat the constant attacker. Only 2/4 did:
 
 ```text
 rotating_representation_pass = false
 ```
 
-So the strong representation claim still does not pass.
-
-The held-out result was stronger. Training only frequencies `0,2,4,6,8` improved the unseen frequencies `1,3,5,7` in **4/4 seeds**:
+The held-out-frequency result was stronger. Training only frequencies `0,2,4,6,8` improved unseen `1,3,5,7` in 4/4 seeds:
 
 ```text
 held-out mean: 49.88 -> 38.28 deg
 median held-out improvement: 12.18 deg
-```
-
-Optimizing the same target vectors in reversed frequency order produced only a 4.90-degree median improvement against the correct curve.
-
-```text
 heldout_coupling_pass = true
 ```
 
-This is Monday's strongest surviving result so far:
+Reversing the frequency ordering of the same target vectors produced much less useful movement against the correct curve.
 
-> **One persistent geometry imposes a learnable coupling across a family of frequency responses: mutations selected at some frequencies can move unseen frequencies in a target-relevant direction, and correct frequency organization matters.**
+This is the strongest surviving FunctionalArbor result in Monday:
 
-That still does not show that morphology is a better parameterization than an ordinary filter. The exact FIR wins trivially on CONV0.
+> **One persistent geometry imposes learnable cross-frequency coupling: mutations selected at some frequencies can move unseen frequencies in a target-relevant direction, and the ordering of the target across frequency matters.**
 
-See:
+But the boring exact FIR remains essentially perfect on CONV0. Monday did not discover a better filter.
 
-- [`notes/conv0_rotating_demixer_contract.md`](notes/conv0_rotating_demixer_contract.md)
-- [`notes/fa_bss_conv0_result.md`](notes/fa_bss_conv0_result.md)
-- [`experiments/fa_bss_conv0_rotating.py`](experiments/fa_bss_conv0_rotating.py)
+See [`notes/fa_bss_conv0_result.md`](notes/fa_bss_conv0_result.md).
 
-### Visible Arbor
+## What survived, in plain language
 
-[`visible_arbor/`](visible_arbor/) is a deliberately transparent browser model of the one-frequency idea:
+The strongest claim did **not** survive.
+
+Monday did not show that morphology beats conventional filtering, performs blind BSS, or explains dendrites.
+
+What survived is smaller and more reusable:
+
+```text
+one persistent structure
+        ↓
+generates many effective coefficients together
+        ↓
+a local structural change moves the whole operator coherently
+        ↓
+some of that movement generalizes to frequencies not used for selection
+```
+
+So the useful idea is not “a tree is an ICA matrix.” It is:
+
+> **A structure can be a low-dimensional generator of a larger family of mutually constrained computations.**
+
+Whether those constraints are an advantage or merely a handicap remains open.
+
+## What Monday was trying to connect
+
+Looking backward, the repo sits at the intersection of two recurring ideas.
+
+The first is source separation:
+
+```text
+world of mixtures
+      -> recover latent causes
+      -> align them across views
+      -> extract the one that matters
+```
+
+The second is persistent organization:
+
+```text
+experience
+      -> changes a durable operator
+      -> future signals are processed differently
+```
+
+FunctionalArbors was one unusually literal test of the second idea: instead of updating an abstract scalar weight, rearrange conserved structure and let the resulting physics generate the effective coefficients.
+
+That is why ICA/IVA/IVE mattered here even though the repo became arbor-heavy. They supplied a rigorous target family and good attackers. The arbor was a contestant, not the theory.
+
+## Claims explicitly not made
+
+- dendrites do ICA;
+- Monday explains why dendrites exist;
+- FunctionalArbors currently performs blind source separation;
+- REAL1B or CONV0 demonstrated a superior broadband representation;
+- structural morphology beats an ordinary matched FIR;
+- source separation is a complete theory of perception or intelligence;
+- the Visible Arbor browser demo is biological evidence.
+
+The attached neuroscience literature already places source separation, local plasticity, and dendritic computation close together. Monday's narrower experimental seam was structural remodeling of the transfer function itself.
+
+## Visible Arbor
+
+[`visible_arbor/`](visible_arbor/) is the browser-visible explanation of the simplest mechanism:
 
 ```text
 move conserved material
         -> change path geometry
         -> change delay + attenuation
         -> move a complex coefficient
-        -> change computation at the soma
+        -> change soma computation
 ```
 
-It is explanatory, not evidence beyond the experiments above.
+It is a visualization of the hypothesis, not additional evidence.
 
-## Current state of mind
+## Where this repo stops
 
-The attractive claim is no longer “dendrites do ICA” or “the brain grows a demixer.” Those are too strong and the literature already occupies much of that territory.
+There is an obvious next structural gate: use a predeclared multi-tap convolutive target that defeats a constant direction and a one-delay model, then compare the shared body with matched compact digital parameterizations.
 
-The narrower machine-organization hypothesis is:
+Monday is deliberately **not** doing that now.
 
-> **A learned structure can parameterize a family of computations because many effective coefficients are coupled consequences of one persistent organization.**
+The current result is enough to close the loop:
 
-CONV0 strengthens one half of that sentence: the coupling is operational and can generalize across withheld frequencies.
+- a body can embody a learned complex coefficient;
+- one body can move a broadband family of coefficients together;
+- cross-frequency structural coupling survives held-out tests;
+- the current morphology does not reliably beat simpler digital representations;
+- the first blind local objective failed;
+- ICA / IVA / IVE remain more valuable as general tools than as decoration around the arbor.
 
-The unresolved half is the important one:
-
-> **When does structural coupling buy anything rather than merely constrain the machine?**
-
-The stored history changes the **operator implemented by the matter**. Whether that is useful compared with compact conventional parameterizations remains open.
-
-## Why ICA / IVA / IVE are here
-
-These methods are not claimed as theories of intelligence. They give Monday unusually clean mathematical test problems.
-
-- **ICA:** recover statistically independent latent causes from mixtures.
-- **IVA:** jointly separate related source vectors across datasets/frequency bins while preserving dependency within each source vector. This naturally addresses the frequency-permutation problem in convolutive separation.
-- **IVE:** extract a source of interest without reconstructing everything.
-
-The longer-term question suggested by Monday is not merely whether structure can separate sources, but whether repeated useful extraction can be compiled into persistent structure so future extraction becomes cheaper and more local.
-
-## Literature map
-
-Monday sits between several already-existing research directions. The repo should not claim an empty gap where there is none.
-
-### Dendritic morphology and computational complexity
-
-- Ido Aizenbud, Daniela Yoeli, David Beniaguev, Christiaan P. J. de Kock, Michael London, Idan Segev. **Dendritic morphology and synaptic nonlinearities enhance functional complexity in human cortical neurons.** PNAS (2026). https://doi.org/10.1073/pnas.2533168123
-
-This supports the premise that morphology itself materially contributes to single-neuron input/output complexity. It does **not** establish that dendritic morphology exists to perform source separation.
-
-### Dendritic computation and source separation
-
-- Toshitake Asabuki, Tomoki Fukai. **Somatodendritic consistency check for temporal feature segmentation.** Nature Communications 11, 1554 (2020). https://doi.org/10.1038/s41467-020-15367-w
-- Giorgia Dellaferrera, Toshitake Asabuki, Tomoki Fukai. **Modeling the Repetition-Based Recovering of Acoustic and Visual Sources With Dendritic Neurons.** Frontiers in Neuroscience 16:855753 (2022). https://doi.org/10.3389/fnins.2022.855753
-- Bariscan Bozkurt, Efe Ali Gorguner, Francesco Innocenti, Rafal Bogacz. **Normative Networks for Source Separation via Local Plasticity and Dendritic Computation.** arXiv:2605.19965 (2026). https://arxiv.org/abs/2605.19965
-
-These works make it incorrect to say that dendrites + BSS is an unexplored combination. Their learned quantities are primarily synaptic/recurrent parameters or compartmental dynamics. Monday's narrower seam is **learning the transfer function by changing morphology itself**.
-
-### ICA / IVA / convolutive BSS
-
-- Miro Arvila, Klaus Nordhausen, Mika Sipila, Sara Taskinen. **Independent vector analysis — an introduction for statisticians.** arXiv:2506.16175 (2025). https://arxiv.org/abs/2506.16175
-- Ruiming Guo, Zhongqiang Luo, Mingchun Li. **A Survey of Optimization Methods for Independent Vector Analysis in Audio Source Separation.** Sensors 23, 493 (2023). https://doi.org/10.3390/s23010493
-
-## Claims we are NOT making
-
-- Dendrites do ICA.
-- Blind source separation is the foundation of perception.
-- FunctionalArbors currently performs blind source separation.
-- Monday explains why biological dendrites exist.
-- REAL1B demonstrated a superior broadband morphology.
-- CONV0 demonstrated a superior broadband morphology.
-- Structural morphology beats ordinary FIR filtering.
-- A browser tree that reaches a target is evidence of neurobiology.
-
-The defensible hypothesis remains:
-
-> **Local structural plasticity under a constrained material budget may be able to learn morphology whose physical broadband transfer function performs a useful signal transform.**
-
-But the result ladder has made the burden sharper: useful morphology must beat reduced conventional attackers on a target that genuinely requires frequency-dependent computation.
-
-## Next hard gate
-
-CONV0's target is deliberately simple even though it rotates strongly:
-
-```text
-ratio(omega) = -0.90 exp(-i14 omega)
-```
-
-One gain and one delay generate the whole operator. An ordinary matched FIR therefore solves it exactly with essentially no drama.
-
-The next discriminating target should be a **predeclared multi-tap convolutive mixer**. Before morphology is trained, require all of:
-
-1. the 2x2 FIR mixer is safely invertible across the evaluation band;
-2. the best constant demixing direction is poor;
-3. the best one-delay / linear-phase demixing model is also poor;
-4. the exact ordinary FIR solution is retained as the calibration winner.
-
-Then compare the shared body, independent-body oracle, reduced digital models, held-out frequencies, and wrong-order controls again.
-
-That gate asks a harder version of Monday's surviving question:
-
-> **Can one coherent structure capture useful operator complexity that is not already explained by one scalar direction or one simple delay?**
-
-Do not tune that target after seeing the first morphology result.
+If this repo is reopened, the first question should therefore be **what concrete task benefits from the coupling**, not how to make a more elaborate tree.
 
 ## Repository map
 
-- [`experiments/`](experiments/) — executable gates and baselines.
-- [`notes/`](notes/) — contracts, results, killed ideas, and interpretation.
-- [`visible_arbor/`](visible_arbor/) — browser-visible explanatory model.
-- [`Wav/`](Wav/) — first real simultaneous sensor recording used by REAL0/REAL1B.
-- [`.github/workflows/`](.github/workflows/) — reproducible Actions runs for current gates.
+- [`experiments/`](experiments/) — executable FA-BSS gates and controls.
+- [`notes/`](notes/) — contracts, results, warnings, killed routes, and interpretation.
+- [`visible_arbor/`](visible_arbor/) — self-contained browser explanation.
+- [`Wav/`](Wav/) — simultaneous sensor recording used by REAL0 / REAL1B.
+- [`.github/workflows/`](.github/workflows/) — reproducible Actions runs.
 
-## Branch discipline
+## Literature map
 
-Earlier work lived on `fa-bss0` and `visible-arbor`; those histories were consolidated into `main`. New discriminating experiments branch from the consolidated state. A branch returns to `main` only after the result, including a negative result, is understood and written down.
+- Ido Aizenbud et al. **Dendritic morphology and synaptic nonlinearities enhance functional complexity in human cortical neurons.** PNAS (2026). https://doi.org/10.1073/pnas.2533168123
+- Toshitake Asabuki, Tomoki Fukai. **Somatodendritic consistency check for temporal feature segmentation.** Nature Communications (2020). https://doi.org/10.1038/s41467-020-15367-w
+- Giorgia Dellaferrera, Toshitake Asabuki, Tomoki Fukai. **Modeling the Repetition-Based Recovering of Acoustic and Visual Sources With Dendritic Neurons.** Frontiers in Neuroscience (2022). https://doi.org/10.3389/fnins.2022.855753
+- Bariscan Bozkurt et al. **Normative Networks for Source Separation via Local Plasticity and Dendritic Computation.** arXiv:2605.19965 (2026). https://arxiv.org/abs/2605.19965
+- Miro Arvila et al. **Independent vector analysis — an introduction for statisticians.** arXiv:2506.16175 (2025). https://arxiv.org/abs/2506.16175
+- Ruiming Guo, Zhongqiang Luo, Mingchun Li. **A Survey of Optimization Methods for Independent Vector Analysis in Audio Source Separation.** Sensors 23, 493 (2023). https://doi.org/10.3390/s23010493
+
+---
+
+Monday is left as a record of a useful collision: **source separation gave the old “hidden causes in mixtures” obsession a mature mathematical language, while FunctionalArbors supplied one concrete test of whether experience can be compiled into persistent structure.** The structural result is modest. The broader toolbox is probably the part worth carrying forward.
