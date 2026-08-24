@@ -1,0 +1,64 @@
+name: REAL1B broadband body
+
+on:
+  push:
+    branches: [broadband-body]
+    paths:
+      - experiments/fa_bss_real1b_broadband.py
+      - experiments/fa_bss_real0.py
+      - Wav/**
+      - requirements.txt
+      - .github/workflows/real1b.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  real1b:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout Monday
+        uses: actions/checkout@v4
+        with:
+          path: Monday
+
+      - name: Checkout FunctionalArbors
+        uses: actions/checkout@v4
+        with:
+          repository: anttiluode/FunctionalArbors
+          path: FunctionalArbors
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: Monday/requirements.txt
+
+      - name: Install dependencies
+        run: python -m pip install -r Monday/requirements.txt
+
+      - name: Syntax check
+        run: python -m py_compile Monday/experiments/fa_bss_real0.py Monday/experiments/fa_bss_real1b_broadband.py
+
+      - name: Run pre-registered broadband gate
+        working-directory: Monday
+        run: >-
+          python experiments/fa_bss_real1b_broadband.py
+          --fa-root ../FunctionalArbors
+          --bins 9
+          --fmin 400
+          --fmax 2400
+          --seeds 4
+          --steps 70
+          --oracle-steps 45
+          --out fa_bss_real1b_broadband.json
+
+      - name: Upload result
+        uses: actions/upload-artifact@v4
+        with:
+          name: fa-bss-real1b
+          path: Monday/fa_bss_real1b_broadband.json
+          if-no-files-found: error
