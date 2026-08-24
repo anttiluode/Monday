@@ -1,0 +1,46 @@
+<!doctype html>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PIPE-OJA-BRANCH0</title>
+<style>
+:root{color-scheme:dark;--bg:#071018;--panel:#0d1822;--ink:#dcecf5;--muted:#7890a0;--branch:#7ee787;--cable:#62b8ff;--shuffle:#ffb347;--soma:#d2a8ff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 ui-monospace,SFMono-Regular,Consolas,monospace}main{max-width:1160px;margin:auto;padding:18px}h1{font-size:21px;margin:0}.lead,.note{color:var(--muted);max-width:940px}.cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin:14px 0}.card,.panel{background:var(--panel);border:1px solid #183241;border-radius:11px;padding:11px}.card small{color:var(--muted)}.card b{display:block;font-size:20px}.grid{display:grid;grid-template-columns:1.15fr 1fr;gap:12px}.panel h2{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#9fc4d8;margin:0 0 8px}svg{width:100%;display:block;background:#08131b;border-radius:8px}.ctrl{display:flex;align-items:center;gap:10px;margin:8px 0;flex-wrap:wrap}input[type=range]{flex:1;min-width:220px}.legend{display:flex;gap:14px;flex-wrap:wrap;color:var(--muted);font-size:12px;margin-top:8px}.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px}@media(max-width:800px){.cards{grid-template-columns:1fr 1fr}.grid{grid-template-columns:1fr}}
+</style>
+<main>
+<h1>PIPE-OJA-BRANCH0 · watch fixed mass become branches</h1>
+<p class="lead">Same two direct pipes at step 0. Same total mass = 1. Same blind broadband nonlinear-Hebbian/Oja-like pressure. The single-path arm is forbidden to branch; the green arm may split mass across path delays.</p>
+<div class="cards"><div class="card"><small>branch mean purity · 8 seeds</small><b>94.48%</b></div><div class="card"><small>cable mean purity</small><b>66.45%</b></div><div class="card"><small>shuffled branch</small><b>56.54%</b></div><div class="card"><small>best possible cable</small><b>83.25%</b></div></div>
+<div class="grid">
+<section class="panel"><h2>seed 0 · structural mass over training</h2><div class="ctrl"><label for="step">learning step</label><input id="step" type="range" min="0" max="18" value="18"><b id="stepv"></b><span id="stats"></span></div><svg id="fan" viewBox="0 0 650 390" role="img" aria-label="Branching pipe mass allocation"></svg><p class="note">Each curved line is a possible physical delay-route. Thickness is slow structural mass. A route can appear only by taking mass from somewhere else.</p></section>
+<section class="panel"><h2>same run · source purity diagnostic</h2><svg id="curve" viewBox="0 0 520 390"></svg><div class="legend"><span><i class="dot" style="background:var(--branch)"></i>branch</span><span><i class="dot" style="background:var(--cable)"></i>single path</span><span><i class="dot" style="background:var(--shuffle)"></i>soma score shuffled</span></div><p class="note">Purity uses hidden sources only for diagnosis. The learning update sees only pipe signal and the broadband soma statistic.</p></section>
+</div>
+<p class="note"><b>Default receipt:</b> branch − cable = +0.2803, exact sign-flip p=0.00781; branch − shuffled = +0.3794, p=0.00781. Every learned branch exceeded the independently searched supervised capacity ceiling of the one-path family. This is still a filter-bank toy, not yet FunctionalArbors.</p>
+</main>
+<script>
+const H=[
+[0,.552225,.814641,[[.5,0,0,0,0,0,0,0,0,0,0],[.5,0,0,0,0,0,0,0,0,0,0]]],
+[10,.579738,.813241,[[.501436,.024522,0,0,0,0,0,0,0,0,0],[.468275,0,0,0,0,0,.005767,0,0,0,0]]],
+[20,.617432,.810707,[[.502185,.05916,0,0,0,0,0,0,0,0,0],[.426636,0,0,0,0,0,.012019,0,0,0,0]]],
+[30,.667087,.806251,[[.498068,.106956,0,0,0,0,0,0,0,0,0],[.372973,0,0,0,.003535,0,.018468,0,0,0,0]]],
+[40,.726091,.799168,[[.479776,.168026,.000323,0,0,0,0,0,0,0,0],[.30929,0,0,0,.017963,0,.023661,.000962,0,0,0]]],
+[50,.783533,.789926,[[.433652,.232979,.00823,0,0,0,0,0,0,0,0],[.247666,0,0,0,.042106,0,.023418,.011948,0,0,0]]],
+[60,.830897,.780037,[[.356462,.285234,.024601,0,.0038,0,0,0,0,0,0],[.208089,0,0,0,.064173,0,.014779,.034939,.001442,.004363,.002118]]],
+[70,.86999,.77066,[[.264979,.308115,.037946,0,.021614,0,0,0,.000386,0,0],[.190939,.003035,0,0,.068974,0,0,.057115,.017464,.010977,.018456]]],
+[80,.899034,.762684,[[.186072,.290663,.050533,0,.049658,0,0,.000008,.01134,0,0],[.173999,.018273,0,0,.064809,0,0,.064043,.04337,.006873,.040357]]],
+[90,.920505,.755462,[[.140776,.242109,.071218,0,.084739,0,0,.001996,.035126,.006037,0],[.148368,.02841,0,0,.060556,0,0,.059149,.069605,0,.05191]]],
+[100,.945992,.74397,[[.113064,.173637,.092644,0,.107943,0,0,.002645,.071624,.053326,.019267],[.111138,.028406,0,0,.045271,.000092,0,.048288,.093713,0,.038941]]],
+[110,.980281,.722357,[[.069695,.101113,.108145,.012207,.094094,0,0,.020324,.126967,.127233,.063712],[.058417,.029018,0,0,.012351,.009922,0,.046354,.103153,.016059,.001235]]],
+[120,.932408,.74162,[[.048262,.076397,.12354,.044094,.03093,0,0,.007973,.126207,.135414,.093902],[.06896,.032028,0,0,0,.021274,0,.046646,.102745,.041628,0]]],
+[130,.924911,.744204,[[.037005,.070082,.123128,.057091,.020165,0,0,0,.118278,.132891,.112091],[.065566,.03437,0,0,0,.023911,.001876,.044253,.098112,.061182,0]]],
+[140,.920429,.745971,[[.02949,.064902,.120949,.066024,.011523,0,0,0,.116876,.131162,.119198],[.063365,.035456,0,0,0,.02344,.00935,.044557,.094729,.06898,0]]],
+[150,.919108,.746753,[[.024512,.061505,.119185,.071132,.005517,0,0,0,.116323,.130357,.12384],[.061119,.036139,0,0,0,.023475,.014817,.044986,.092705,.074388,0]]],
+[160,.919157,.747026,[[.021699,.059141,.11777,.073606,.001166,0,0,0,.116054,.129963,.127332],[.059248,.036362,0,0,0,.023768,.018736,.045335,.091615,.078205,0]]],
+[170,.91947,.747095,[[.020216,.057666,.116759,.074562,0,0,0,0,.115568,.129527,.129517],[.058339,.036095,0,0,0,.02419,.020961,.045227,.091204,.080168,0]]],
+[180,.91902,.747331,[[.019388,.056982,.116517,.075305,0,0,0,0,.115376,.129509,.130212],[.058206,.036003,0,0,0,.02416,.021601,.045009,.091096,.080635,0]]]
+];
+const C=[.5522,.5622,.5726,.5833,.594,.6042,.6138,.6223,.6299,.6363,.6417,.6463,.65,.6531,.6557,.6578,.6595,.6609,.6621];
+const S=[.5522,.5521,.5518,.554,.5541,.5521,.5515,.5516,.5523,.5515,.5497,.5509,.5507,.5512,.5528,.5543,.5518,.551,.5483];
+const step=document.getElementById('step'),fan=document.getElementById('fan'),stats=document.getElementById('stats'),stepv=document.getElementById('stepv');
+function renderFan(){const z=H[+step.value],m=z[3],sx=88,tx=570,sy=195;let s=`<circle cx="${tx}" cy="${sy}" r="14" fill="var(--soma)"/><text x="${tx-18}" y="${sy+30}" fill="var(--soma)" font-size="12">soma</text>`;for(let i=0;i<2;i++){const y0=i?285:105;s+=`<circle cx="${sx}" cy="${y0}" r="10" fill="${i?'#62b8ff':'#ffb347'}"/><text x="${sx-12}" y="${y0-18}" fill="${i?'#62b8ff':'#ffb347'}" font-size="13">x${i+1}</text>`;for(let d=0;d<11;d++){const w=m[i][d];if(w<.0004)continue;const bx=155+d*31,by=y0+(d-5)*10;s+=`<path d="M ${sx} ${y0} Q ${bx} ${by} ${tx} ${sy}" fill="none" stroke="var(--branch)" stroke-opacity="${Math.min(.95,.18+w*2.3)}" stroke-width="${Math.max(1,w*30)}"/>`;if(w>.018)s+=`<text x="${bx}" y="${by-4}" fill="#9bb0bc" font-size="9">d${d} ${(100*w).toFixed(0)}%</text>`}}const active=m.flat().filter(x=>x>.001).length,total=m.flat().reduce((a,b)=>a+b,0);fan.innerHTML=s;stepv.textContent=' '+z[0];stats.textContent='purity '+(100*z[1]).toFixed(1)+'% · J '+z[2].toFixed(3)+' · active '+active+' · mass '+total.toFixed(3)}
+step.addEventListener('input',renderFan);renderFan();
+const curve=document.getElementById('curve');let g='<line x1="46" y1="340" x2="500" y2="340" stroke="#29414f"/><line x1="46" y1="25" x2="46" y2="340" stroke="#29414f"/>';for(let q=0;q<=4;q++){const y=340-q*78.75;g+=`<line x1="46" y1="${y}" x2="500" y2="${y}" stroke="#142c38"/><text x="7" y="${y+4}" fill="#6f8796" font-size="10">${(q*.25).toFixed(2)}</text>`}function pts(a){return a.map((p,i)=>(46+454*i/18)+','+(340-315*p)).join(' ')}g+=`<polyline points="${pts(H.map(x=>x[1]))}" fill="none" stroke="var(--branch)" stroke-width="3"/><polyline points="${pts(C)}" fill="none" stroke="var(--cable)" stroke-width="3"/><polyline points="${pts(S)}" fill="none" stroke="var(--shuffle)" stroke-width="3"/><line x1="46" y1="${340-315*.8337}" x2="500" y2="${340-315*.8337}" stroke="#7f95a2" stroke-dasharray="5 5"/><text x="280" y="${332-315*.8337}" fill="#7f95a2" font-size="10">seed 0 cable capacity 83.37%</text><text x="430" y="365" fill="#6f8796" font-size="10">step</text>`;curve.innerHTML=g;
+</script>
