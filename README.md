@@ -35,3 +35,34 @@ python experiments/fa_bss0_run.py --fa-root ../FunctionalArbors --seeds 8 --muta
 ```
 
 The preliminary four-seed scratch smoke test is recorded under `notes/preliminary_scratch_result.md`; it is explicitly not yet a result.
+
+## PIPE-OJA-BRANCH0
+
+Work is on branch `oja-pipe-branching` under [`pipe_oja/`](pipe_oja/).
+
+This gate reconnects Monday to the earlier **self-normalizing pipe** idea. Structural resource is a non-negative mass budget. Local pipe signal is paired with a nonlinear broadband soma score; after every update, the same fixed amount of mass is redistributed rather than created.
+
+The adversarial comparison is deliberately simple:
+
+- same two mixed inputs;
+- same whitening front end;
+- same initial two direct pipes;
+- same total mass `sum(m)=1`;
+- same blind broadband gradient;
+- `cable`: exactly one delay route per sensor;
+- `branch`: mass may split over several delay routes;
+- `branch_shuffle`: same branching freedom, but local pipe current is paired with a time-shuffled soma score.
+
+The default eight-seed run gives mean hidden-source purity `0.9448` for branching, `0.6645` for the cable, and `0.5654` for shuffled branching. The independently searched supervised capacity ceiling of the entire single-path family is only `0.8325`; every learned branch exceeds its matched cable ceiling. Paired exact sign-flip tests give `p=0.00781` for both branch-vs-cable and branch-vs-shuffle.
+
+That is a result for the declared toy, not yet for FunctionalArbors. The point is narrower: **branching finally earns a computational role that cannot be reduced to stretching one delay line.**
+
+Run:
+
+```bash
+python pipe_oja/run.py
+```
+
+Open [`pipe_oja/index.html`](pipe_oja/index.html) directly to scrub through seed 0 and watch fixed structural mass split into several delay routes.
+
+The next gate ports this exact single-path-vs-free-branch comparison into the real FunctionalArbors wave body.
