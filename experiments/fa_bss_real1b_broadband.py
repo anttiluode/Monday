@@ -3,7 +3,7 @@
 This gate attacks the interpretation left alive by REAL0.
 
 REAL0 showed that a FunctionalArbor morphology could be moved toward ONE complex
-AuxIVA demixing coefficient.  That can still be dismissed as an eccentric way to
+AuxIVA demixing coefficient. That can still be dismissed as an eccentric way to
 store one complex weight.
 
 REAL1B asks the harder representational question:
@@ -17,9 +17,9 @@ not biological learning.
 
 Important frequency warning
 ---------------------------
-The FunctionalArbor simulator is dimensionless.  We therefore do NOT claim that
+The FunctionalArbor simulator is dimensionless. We therefore do NOT claim that
 an audio frequency in Hz is the same physical frequency as the arbor solver's
-omega.  Selected audio bins are mapped through ONE global linear scale so that
+omega. Selected audio bins are mapped through ONE global linear scale so that
 the geometric-mean selected audio frequency maps to FreeConfig.carrier_omega.
 This preserves ordering and relative frequency ratios while avoiding a fake Hz
 calibration.
@@ -58,10 +58,7 @@ def _unit(v):
 def projective_errors(H, W):
     H = np.asarray(H, np.complex128)
     W = np.asarray(W, np.complex128)
-    out = []
-    for h, w in zip(H, W):
-        out.append(r0.proj_error(h, w))
-    return np.asarray(out, float)
+    return np.asarray([r0.proj_error(h, w) for h, w in zip(H, W)], float)
 
 
 def mean_error(H, W, weights=None, indices=None):
@@ -89,8 +86,7 @@ def best_constant_direction(W, weights=None):
     for a, w in zip(weights, W):
         S += a * np.outer(w, w.conj())
     val, vec = np.linalg.eigh(S)
-    v = vec[:, int(np.argmax(val))]
-    return _unit(v)
+    return _unit(vec[:, int(np.argmax(val))])
 
 
 def select_spread_bins(aux, fs, nfft, count=9, fmin=400.0, fmax=2400.0):
@@ -110,15 +106,21 @@ def select_spread_bins(aux, fs, nfft, count=9, fmin=400.0, fmax=2400.0):
     lo, hi = math.log(float(fmin)), math.log(float(fmax))
     edges = np.linspace(lo, hi, int(count) + 1)
     chosen = []
+    used = set()
     for j in range(int(count)):
         a, b = math.exp(edges[j]), math.exp(edges[j + 1])
-        m = candidates[(freqs[candidates] >= a) & (freqs[candidates] <= b)]
+        if j == int(count) - 1:
+            m = candidates[(freqs[candidates] >= a) & (freqs[candidates] <= b)]
+        else:
+            m = candidates[(freqs[candidates] >= a) & (freqs[candidates] < b)]
+        m = np.asarray([k for k in m if int(k) not in used], int)
         if len(m):
-            chosen.append(int(m[int(np.argmax(energy[m]))]))
+            k = int(m[int(np.argmax(energy[m]))])
+            chosen.append(k)
+            used.add(k)
 
     # Fill any empty log bands with the strongest still-unused valid bins.
     if len(chosen) < count:
-        used = set(chosen)
         for k in candidates[np.argsort(energy[candidates])[::-1]]:
             k = int(k)
             if k not in used:
@@ -151,23 +153,38 @@ def omega_map(hz, carrier_omega):
 
 
 def arbor_curve(model, omegas):
-    return np.asarray([r0.arbor_transfer(model, float(w)) for w in omegas], np.complex128)
+    return np.asarray(
+        [r0.arbor_transfer(model, float(w)) for w in omegas],
+        np.complex128,
+    )
 
 
 def describe_curve(H, W, weights):
     e = projective_errors(H, W)
+    m = mean_error(H, W, weights)
     return {
-        "mean_error_rad": mean_error(H, W, weights),
-        "mean_error_deg": float(np.degrees(mean_error(H, W, weights))),
+        "mean_error_rad": m,
+        "mean_error_deg": float(np.degrees(m)),
         "per_bin_error_rad": e.tolist(),
         "per_bin_error_deg": np.degrees(e).tolist(),
         "H": [[[float(z.real), float(z.imag)] for z in h] for h in H],
-        "ratio_H1_H0": [[float((h[1] / h[0]).real), float((h[1] / h[0]).imag)] for h in H],
+        "ratio_H1_H0": [
+            [float((h[1] / h[0]).real), float((h[1] / h[0]).imag)] for h in H
+        ],
     }
 
 
-def compile_shared(base, omegas, W_target, weights, steps, seed,
-                   train_indices=None, eval_target=None, label="shared"):
+def compile_shared(
+    base,
+    omegas,
+    W_target,
+    weights,
+    steps,
+    seed,
+    train_indices=None,
+    eval_target=None,
+    label="shared",
+):
     m = r0._copy_fa(base)
     m.rng = np.random.default_rng(int(seed))
     W_target = np.asarray(W_target, np.complex128)
@@ -175,11 +192,20 @@ def compile_shared(base, omegas, W_target, weights, steps, seed,
     if train_indices is None:
         train_indices = np.arange(len(omegas), dtype=int)
     train_indices = np.asarray(train_indices, int)
-    eval_indices = np.asarray([i for i in range(len(omegas)) if i not in set(train_indices.tolist())], int)
+    train_set = set(train_indices.tolist())
+    eval_indices = np.asarray(
+        [i for i in range(len(omegas)) if i not in train_set], int
+    )
 
     H = arbor_curve(m, omegas)
+    H_start = H.copy()
     train_err = mean_error(H, W_target, weights, train_indices)
     start_correct = describe_curve(H, eval_target, weights)
+    held_start = (
+        mean_error(H_start, eval_target, weights, eval_indices)
+        if len(eval_indices)
+        else float("nan")
+    )
     accepted = 0
     hist = []
 
@@ -196,24 +222,33 @@ def compile_shared(base, omegas, W_target, weights, steps, seed,
             train_err = en
             accepted += 1
             correct_all = mean_error(H, eval_target, weights)
-            held = (mean_error(H, eval_target, weights, eval_indices)
-                    if len(eval_indices) else float("nan"))
-            hist.append({
-                "step": int(j), "accepted": int(accepted),
-                "train_error_deg": float(np.degrees(train_err)),
-                "correct_all_error_deg": float(np.degrees(correct_all)),
-                "heldout_error_deg": float(np.degrees(held)) if np.isfinite(held) else None,
-                "proposal": prop,
-            })
+            held = (
+                mean_error(H, eval_target, weights, eval_indices)
+                if len(eval_indices)
+                else float("nan")
+            )
+            hist.append(
+                {
+                    "step": int(j),
+                    "accepted": int(accepted),
+                    "train_error_deg": float(np.degrees(train_err)),
+                    "correct_all_error_deg": float(np.degrees(correct_all)),
+                    "heldout_error_deg": (
+                        float(np.degrees(held)) if np.isfinite(held) else None
+                    ),
+                    "proposal": prop,
+                }
+            )
         else:
             m.restore(snap)
 
     final_correct = describe_curve(H, eval_target, weights)
     final_train = mean_error(H, W_target, weights, train_indices)
-    held_start = (mean_error(np.asarray(start_correct["H_real_complex_placeholder"]) if False else arbor_curve(base, omegas), eval_target, weights, eval_indices)
-                  if len(eval_indices) else float("nan"))
-    held_final = (mean_error(H, eval_target, weights, eval_indices)
-                  if len(eval_indices) else float("nan"))
+    held_final = (
+        mean_error(H, eval_target, weights, eval_indices)
+        if len(eval_indices)
+        else float("nan")
+    )
 
     return {
         "label": label,
@@ -223,8 +258,12 @@ def compile_shared(base, omegas, W_target, weights, steps, seed,
         "start_correct": start_correct,
         "final_correct": final_correct,
         "final_train_error_deg": float(np.degrees(final_train)),
-        "heldout_start_error_deg": float(np.degrees(held_start)) if np.isfinite(held_start) else None,
-        "heldout_final_error_deg": float(np.degrees(held_final)) if np.isfinite(held_final) else None,
+        "heldout_start_error_deg": (
+            float(np.degrees(held_start)) if np.isfinite(held_start) else None
+        ),
+        "heldout_final_error_deg": (
+            float(np.degrees(held_final)) if np.isfinite(held_final) else None
+        ),
         "history": hist,
         "mass": int(m.mass()),
         "branch_stats": m.branch_stats(),
@@ -264,31 +303,55 @@ def run_seed(Arbor, Config, seed, omegas, targets, weights, steps, oracle_steps)
     start = describe_curve(H0, targets, weights)
 
     allfit = compile_shared(
-        base, omegas, targets, weights, steps,
-        seed=100_000 + seed, label="all_bins")
+        base,
+        omegas,
+        targets,
+        weights,
+        steps,
+        seed=100_000 + seed,
+        label="all_bins",
+    )
 
     train_idx = np.arange(0, len(omegas), 2, dtype=int)
     heldout = compile_shared(
-        base, omegas, targets, weights, steps,
-        seed=200_000 + seed, train_indices=train_idx, label="alternating_train")
+        base,
+        omegas,
+        targets,
+        weights,
+        steps,
+        seed=200_000 + seed,
+        train_indices=train_idx,
+        label="alternating_train",
+    )
 
     rng = np.random.default_rng(300_000 + seed)
     perm = rng.permutation(len(targets))
     if np.all(perm == np.arange(len(targets))):
         perm = np.roll(perm, 1)
     shuffled = compile_shared(
-        base, omegas, targets[perm], weights, steps,
-        seed=310_000 + seed, eval_target=targets, label="shuffled_curve")
+        base,
+        omegas,
+        targets[perm],
+        weights,
+        steps,
+        seed=310_000 + seed,
+        eval_target=targets,
+        label="shuffled_curve",
+    )
     shuffled["permutation"] = perm.tolist()
 
     oracle_err = []
     oracle_acc = []
     for j, (omega, target) in enumerate(zip(omegas, targets)):
-        e, a = compile_one_frequency(
-            base, omega, target, oracle_steps,
-            seed=400_000 + 10_000 * seed + j)
+        e, acc = compile_one_frequency(
+            base,
+            omega,
+            target,
+            oracle_steps,
+            seed=400_000 + 10_000 * seed + j,
+        )
         oracle_err.append(e)
-        oracle_acc.append(a)
+        oracle_acc.append(acc)
 
     return {
         "seed": int(seed),
@@ -312,12 +375,24 @@ def summarise(rows, constant_deg):
         return {"usable_seeds": 0}
 
     start = np.asarray([r["start"]["mean_error_deg"] for r in good], float)
-    final = np.asarray([r["all_bins"]["final_correct"]["mean_error_deg"] for r in good], float)
-    held0 = np.asarray([r["heldout"]["heldout_start_error_deg"] for r in good], float)
-    held1 = np.asarray([r["heldout"]["heldout_final_error_deg"] for r in good], float)
-    shuf0 = np.asarray([r["shuffled"]["start_correct"]["mean_error_deg"] for r in good], float)
-    shuf1 = np.asarray([r["shuffled"]["final_correct"]["mean_error_deg"] for r in good], float)
-    oracle = np.asarray([r["independent_body_oracle"]["mean_error_deg"] for r in good], float)
+    final = np.asarray(
+        [r["all_bins"]["final_correct"]["mean_error_deg"] for r in good], float
+    )
+    held0 = np.asarray(
+        [r["heldout"]["heldout_start_error_deg"] for r in good], float
+    )
+    held1 = np.asarray(
+        [r["heldout"]["heldout_final_error_deg"] for r in good], float
+    )
+    shuf0 = np.asarray(
+        [r["shuffled"]["start_correct"]["mean_error_deg"] for r in good], float
+    )
+    shuf1 = np.asarray(
+        [r["shuffled"]["final_correct"]["mean_error_deg"] for r in good], float
+    )
+    oracle = np.asarray(
+        [r["independent_body_oracle"]["mean_error_deg"] for r in good], float
+    )
 
     improvement_frac = (start - final) / np.maximum(start, EPS)
     held_improve = held0 - held1
@@ -388,14 +463,22 @@ def main():
 
     print("REAL1B broadband structural compile")
     print(f"  fs={fs} nfft={a.nfft} target_component={aux['target']}")
-    print(f"  selected {len(targets)} bins, {sel['hz'][0]:.1f}..{sel['hz'][-1]:.1f} Hz")
-    print(f"  one global frequency scale: geometric mean {hz_ref:.2f} Hz -> omega {probe_cfg.carrier_omega:.4f}")
+    print(
+        f"  selected {len(targets)} bins, "
+        f"{sel['hz'][0]:.1f}..{sel['hz'][-1]:.1f} Hz"
+    )
+    print(
+        f"  one global frequency scale: geometric mean {hz_ref:.2f} Hz "
+        f"-> omega {probe_cfg.carrier_omega:.4f}"
+    )
     print(f"  omega range: {omegas[0]:.4f} .. {omegas[-1]:.4f}")
     print(f"  best constant-direction error: {constant_deg:.2f} deg")
 
     rows = []
     for seed in range(int(a.seeds)):
-        row = run_seed(Arbor, Config, seed, omegas, targets, weights, a.steps, a.oracle_steps)
+        row = run_seed(
+            Arbor, Config, seed, omegas, targets, weights, a.steps, a.oracle_steps
+        )
         rows.append(row)
         if not row.get("bootstrap_ok"):
             print(f"  seed {seed}: bootstrap failed")
@@ -407,7 +490,12 @@ def main():
         sh0 = row["shuffled"]["start_correct"]["mean_error_deg"]
         sh1 = row["shuffled"]["final_correct"]["mean_error_deg"]
         o = row["independent_body_oracle"]["mean_error_deg"]
-        print(f"  seed {seed}: shared {s:.2f}->{f:.2f} deg | heldout {h0:.2f}->{h1:.2f} | shuffled correct {sh0:.2f}->{sh1:.2f} | per-bin oracle {o:.2f}")
+        print(
+            f"  seed {seed}: shared {s:.2f}->{f:.2f} deg | "
+            f"heldout {h0:.2f}->{h1:.2f} | "
+            f"shuffled correct {sh0:.2f}->{sh1:.2f} | "
+            f"per-bin oracle {o:.2f}"
+        )
 
     summary = summarise(rows, constant_deg)
     print("summary:")
@@ -415,11 +503,21 @@ def main():
 
     payload = {
         "experiment": "FA-BSS-REAL1B",
-        "claim_scope": "supervised broadband structural compile; not blind BSS; no physical Hz-to-omega calibration claimed",
+        "claim_scope": (
+            "supervised broadband structural compile; not blind BSS; "
+            "no physical Hz-to-omega calibration claimed"
+        ),
         "inputs": {
-            "mic": a.mic, "pickup": a.pickup, "fs": int(fs), "nfft": int(a.nfft),
-            "iva_iters": int(a.iva_iters), "fmin": float(a.fmin), "fmax": float(a.fmax),
-            "selected_bins": int(a.bins), "seeds": int(a.seeds), "steps": int(a.steps),
+            "mic": a.mic,
+            "pickup": a.pickup,
+            "fs": int(fs),
+            "nfft": int(a.nfft),
+            "iva_iters": int(a.iva_iters),
+            "fmin": float(a.fmin),
+            "fmax": float(a.fmax),
+            "selected_bins": int(a.bins),
+            "seeds": int(a.seeds),
+            "steps": int(a.steps),
             "oracle_steps": int(a.oracle_steps),
         },
         "frequency_map": {
@@ -434,9 +532,16 @@ def main():
             "auxiva_component": int(aux["target"]),
             "stft_bins": sel["bins"].tolist(),
             "energy": sel["energies"].tolist(),
-            "W": [[[float(z.real), float(z.imag)] for z in w] for w in targets],
-            "ratio_w1_w0": [[float((w[1]/w[0]).real), float((w[1]/w[0]).imag)] for w in targets],
-            "best_constant_direction": [[float(z.real), float(z.imag)] for z in const],
+            "W": [
+                [[float(z.real), float(z.imag)] for z in w] for w in targets
+            ],
+            "ratio_w1_w0": [
+                [float((w[1] / w[0]).real), float((w[1] / w[0]).imag)]
+                for w in targets
+            ],
+            "best_constant_direction": [
+                [float(z.real), float(z.imag)] for z in const
+            ],
             "best_constant_error_deg": constant_deg,
         },
         "rows": rows,
