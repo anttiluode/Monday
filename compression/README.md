@@ -203,92 +203,117 @@ RESULT: FAIL
 strong fixed-code competitor: FAIL
 ```
 
-This is the most important result in the folder so far.
+This is the most important failure that led to C3.
 
-The clean C1 mechanism **does not simply appear when attached after the fact to C0's local Gabor moves**.
-
-The current per-gate pose search emits too many small, inconsistent, intermittent `{-1,0,+1}` decisions. A post-hoc relation matrix barely saves anything.
-
-So the attractive story:
-
-```text
-persistent Gabor gates -> transient matrix -> objects -> cheap guidance
-```
-
-has **not** been demonstrated.
-
-What survived is narrower:
-
-1. C0 says transport is hiding inside some of the fixed-code churn.
-2. C1 says transient grouping can be useful when coherent motions are actually observable.
-3. C2 says the current Gabor move estimator destroys / fails to expose enough coherence for the grouping to matter.
+The clean C1 mechanism **does not simply appear when attached after the fact to C0's local Gabor moves**. The per-gate pose search emits too many small, inconsistent, intermittent `{-1,0,+1}` decisions. A post-hoc relation matrix barely saves anything.
 
 ---
 
-## The next gate
+## Gate C3 — move the matrix before the decisions
 
-The next experiment should **not** tune C2's clustering thresholds until it passes.
+Run:
 
-The matrix needs to move earlier in the causal chain.
-
-### C3 — group-guided transport, not post-hoc grouping
-
-Current C0:
-
-```text
-each gate independently searches 3x3
-        |
-        v
-37 jittery MOVE decisions/frame
-        |
-        v
-try to group them afterward
+```bash
+python compression/gate3_predictive_group_codec.py
 ```
 
-Proposed C3:
+C3 changes the causal order rather than tuning C2.
 
 ```text
-continuous/local transport evidence
+frozen pre-decision reconstruction
         |
         v
-transient relation matrix
+all gates propose local 3x3 moves
+before any gate is moved
         |
         v
-temporary shared motion hypotheses
+decaying motion/proximity matrix
         |
         v
-group predicts where its gates should search
-        |
-        +-- cheap residual 3x3 / subpixel correction
+temporary shared-motion hypothesis
         |
         v
-MOVE GROUP + sparse residuals
+sequential residual refit searches only:
+  STAY + top two frozen proposals + group proposal
+        |
+        v
+MOVE GROUP + sparse residual overrides
 ```
 
-The difference is important.
+The reason for freezing the proposal stage is specific: in C0 the first gate's accepted move changes the residual seen by the next gate. If several gates share a physical motion, that sequential fitting can decorrelate their move decisions before a later grouping stage ever sees them.
 
-The transient matrix would become a **predictive routing scaffold**, not merely a compressor placed after 100 independent decisions have already thrown away their common structure.
+C3 therefore lets the matrix see the local proposals **before** those decisions modify one another.
 
-Good sources of pre-decision motion evidence include:
+### The boring pruning null
 
-- quadrature Gabor phase change;
-- local optical-flow-style transport;
-- correlation of amplitude/phase trajectories across nearby scales;
-- a coarse-to-fine motion proposal where coarse gates guide fine gates.
+There is an important attacker inside C3:
 
-Registered attackers for C3 should include:
+```text
+PRUNED NULL = same frozen proposal stage
+            + same top-2 reduced sequential search
+            + NO transient matrix
+```
 
-- fixed-address Gabor event codec;
-- independent MOVE codec from C0;
-- global-motion-only scene;
-- two objects crossing / occluding;
-- shuffled gate trajectories;
-- matched PSNR, not just lower bits;
-- full membership-definition and residual costs.
+Without this null it would be easy to credit the matrix for a gain actually caused by the much simpler act of not re-searching all nine translations per gate.
 
-A useful win is not "the groups look object-like." It is:
+First deterministic run, 2026-08-24:
 
-> **group-guided transport lowers total coded bits or search work at matched quality, and the advantage disappears when the motion relation is destroyed.**
+```text
+fixed   bits/frame   391.7 | churn 5.49% | PSNR 24.27 | search   0.0
+indep   bits/frame   750.8 | churn 2.02% | PSNR 23.59 | search 809.2
+pruned  bits/frame   661.9 | churn 2.60% | PSNR 23.54 | search 201.6
+guided  bits/frame   641.3 | churn 2.34% | PSNR 23.35 | search 200.3
+
+guided groups/frame             0.53
+guided motion bits/frame       342.5
+guided residuals/frame           0.34
+membership bits/frame           13.1
+
+guided / independent bits       0.854
+guided / pruned-null bits       0.969
+guided / fixed bits             1.637
+guided / independent search     0.248
+PSNR vs independent            -0.23 dB
+PSNR vs pruned null            -0.19 dB
+```
+
+Exact C3 numerical stop lines were **not preregistered** before the first run, so do not treat the following labels like the earlier registered gates. The script prints three interpretations:
+
+```text
+OVERALL GUIDED ROUTE: PASS
+MATRIX INCREMENTAL OVER PRUNING NULL: FAIL
+STRONG FIXED-CODE COMPETITOR: FAIL
+```
+
+The important decomposition is:
+
+1. Moving the prediction stage earlier and pruning the local search is useful. Relative to C0's independent MOVE codec, C3 uses about **14.6% fewer bits**, about **75% fewer candidate evaluations**, and loses only **0.23 dB**.
+2. Most of that win is **not yet the transient matrix**. The no-matrix pruning null is already at 661.9 bits/frame. The matrix only moves that to 641.3 bits/frame, about a **3.1% incremental saving**, while losing another 0.19 dB. That misses the deliberately stronger 5% incremental line in the script.
+3. Neither moving codec is close to the boring fixed-address event coder. C3 remains about **1.64x** its bit cost.
+
+So C3 partially repairs C2's causal-order mistake, but it does **not** earn the object-like story.
+
+The current evidence supports a much narrower statement:
+
+> **Pre-decision transport proposals are a useful predictive scaffold. A transient relation matrix adds a small extra saving on this toy stream, but the dominant gain comes from proposal pruning, and the original fixed-address codec still wins badly on bits.**
+
+That is a better stopping point than tuning the matrix until it passes.
+
+### What C3 says the next gate should attack
+
+The matrix is trying to bind already-discrete `{-1,0,+1}` translations. That may still be too late / too lossy a description of motion.
+
+The next serious candidates are earlier and more continuous:
+
+- quadrature Gabor **phase change** before a discrete move is selected;
+- coarse-scale gates proposing a motion field that fine gates inherit;
+- local affine / Sim(2)-like group motion rather than one identical translation for every member;
+- continuous trajectories followed by PCA only to ask whether the motion is actually low-rank;
+- then ICA / IVA only if several independent cause families are genuinely mixed.
+
+And before any semantic language returns, the same hard rule remains:
+
+> if the representation does not reduce bits, search, or distortion against the boring null, it has not bought the codec anything.
 
 ---
 
@@ -296,9 +321,9 @@ A useful win is not "the groups look object-like." It is:
 
 Not first.
 
-The current C0 move stream is already telling us that throwing a decomposition at noisy per-gate trajectories would be premature.
+C3 now gives a better place to insert them than C0 did, but the matrix result itself is still small.
 
-If C3 produces persistent continuous trajectories, then:
+If a next gate produces more continuous persistent trajectories, then:
 
 ```text
 gate trajectories
@@ -355,16 +380,18 @@ C2  post-hoc matrix on actual C0 gate moves
     -> almost no savings
     -> FAIL
 
-C3  predictive group-guided transport
-    -> not implemented yet
+C3  pre-decision proposals + matrix-guided reduced search
+    -> 14.6% below independent MOVE bits
+    -> ~75% less local search
+    -> only 3.1% incremental gain over no-matrix pruning null
+    -> fixed-address codec still wins badly
+    -> broad route interesting; matrix-specific claim NOT YET EARNED
 ```
 
-That is enough for Monday night.
-
-The interesting object is no longer "object recognition."
+The interesting object is still not "object recognition."
 
 It is:
 
-> **a transient matrix that exists only while several persistent primitives benefit from sharing a prediction.**
+> **a transient relation scaffold that should exist only while several persistent primitives actually benefit from sharing a prediction.**
 
-If that eventually resembles an object, the compression advantage should arrive before the name does.
+C3 says that idea has a measurable but currently small footprint in the real Gabor toy stream. If a later version begins to resemble an object, the compression advantage still has to arrive before the name does.
