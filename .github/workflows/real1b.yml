@@ -9,6 +9,14 @@ on:
       - Wav/**
       - requirements.txt
       - .github/workflows/real1b.yml
+  pull_request:
+    branches: [main]
+    paths:
+      - experiments/fa_bss_real1b_broadband.py
+      - experiments/fa_bss_real0.py
+      - Wav/**
+      - requirements.txt
+      - .github/workflows/real1b.yml
   workflow_dispatch:
 
 permissions:
