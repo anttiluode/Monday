@@ -110,6 +110,21 @@ and the exact target row `w(omega)`.
 
 No new edge weights, route-specific conductances, or frequency-specific body parameters may be introduced.
 
+## Frozen execution constants
+
+These are fixed before the first morphology run:
+
+```text
+seeds                 = 0,1,2,3
+bootstrap_mass        = 90
+shared proposals      = 120 per arm
+independent proposals = 80 per frequency
+frequencies           = 9
+omega range           = 0.07 .. 0.35 inclusive
+```
+
+The existing v0.5 model configuration is otherwise unchanged.
+
 ## Predeclared interpretation
 
 ### `rotating_representation_pass`
